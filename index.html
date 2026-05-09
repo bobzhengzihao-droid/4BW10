@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  />
+  <title>Weather Sentence Game</title>
+  <style>
+    :root {
+      --panel-bg: rgba(255, 255, 255, 0.18);
+      --panel-border: rgba(255, 255, 255, 0.35);
+      --text-main: #ffffff;
+      --text-dark: #15304d;
+      --good: #2ecc71;
+      --bad: #ff6b6b;
+      --accent: #ffd166;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      font-family: "Trebuchet MS", "Comic Sans MS", "Arial Rounded MT Bold", Arial, sans-serif;
+      overflow: hidden;
+      background: #6ecbff;
+    }
+
+    body {
+      position: relative;
+      color: var(--text-main);
+    }
+
+    #weatherCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: linear-gradient(180deg, #78d7ff 0%, #b7ecff 100%);
+    }
+
+    .overlay {
+      position: relative;
+      z-index: 2;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 18px;
+      pointer-events: none;
+    }
+
+    .top-bar,
+    .bottom-panel,
+    .feedback,
+    .start-screen {
+      pointer-events: auto;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .card {
+      background: var(--panel-bg);
+      border: 2px solid var(--panel-border);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .score-card,
+    .weather-card {
+      padding: 14px 18px;
+      min-width: 150px;
+    }
+
+    .score-label,
+    .weather-label {
+      font-size: 0.95rem;
+      opacity: 0.95;
+      margin-bottom: 4px;
+    }
+
+    .score-value,
+    .weather-value {
+      font-size: clamp(1.35rem, 3vw, 2rem);
+      font-weight: 900;
+      letter-spacing: 0.5px;
+    }
+
+    .center-area {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 8px 0;
+    }
+
+    .question-box {
+      text-align: center;
+      padding: 18px 24px;
+      max-width: 760px;
+      width: min(92vw, 760px);
+    }
+
+    .question-title {
+      margin: 0;
+      font-size: clamp(1.7rem, 5vw, 3.2rem);
+      font-weight: 900;
+      line-height: 1.2;
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+    }
+
+    .question-subtitle {
+      margin-top: 10px;
+      font-size: clamp(1rem, 2.8vw, 1.25rem);
+      opacity: 0.95;
+    }
+
+    .feedback {
+      margin: 10px auto 0;
+      min-height: 40px;
+      text-align: center;
+      font-size: clamp(1rem, 2.8vw, 1.2rem);
+      font-weight: 800;
+      padding: 8px 16px;
+      border-radius: 999px;
+      width: fit-content;
+      max-width: 92vw;
+      transition: all 0.25s ease;
+      opacity: 0;
+      transform: translateY(8px);
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .feedback.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .feedback.good {
+      color: #fff;
+      background: rgba(46, 204, 113, 0.28);
+      border: 2px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .feedback.bad {
+      color: #fff;
+      background: rgba(255, 107, 107, 0.28);
+      border: 2px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .bottom-panel {
+      padding: 14px;
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .weather-btn,
+    .reset-btn,
+    .speak-btn,
+    .start-btn {
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 900;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+      box-shadow: var(--shadow);
+    }
+
+    .weather-btn:hover,
+    .reset-btn:hover,
+    .speak-btn:hover,
+    .start-btn:hover {
+      transform: translateY(-2px) scale(1.01);
+    }
+
+    .weather-btn.correct {
+  background: rgba(46, 204, 113, 0.35);
+  color: #fff;
+  border: 2px solid #2ecc71;
+  transform: scale(1.03);
+}
+
+.weather-btn.wrong {
+  background: rgba(255, 107, 107, 0.35);
+  color: #fff;
+  border: 2px solid #ff6b6b;
+  transform: scale(0.97);
+}
+
+.weather-btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.weather-btn:active,
+    .reset-btn:active,
+    .speak-btn:active,
+    .start-btn:active {
+      transform: scale(0.98);
+    }
+
+    .weather-btn {
+      min-height: 88px;
+      padding: 12px 10px;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--text-dark);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      touch-action: manipulation;
+    }
+
+    .weather-btn .icon {
+      font-size: 1.8rem;
+      line-height: 1;
+    }
+
+    .weather-btn .label {
+      font-size: 1.05rem;
+      letter-spacing: 0.2px;
+    }
+
+    .controls {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .reset-btn,
+    .speak-btn,
+    .start-btn {
+      min-height: 58px;
+      padding: 12px 16px;
+      font-size: 1rem;
+      color: #15304d;
+      background: linear-gradient(180deg, #fff5bf 0%, #ffd166 100%);
+    }
+
+    .hint {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 0.95rem;
+      opacity: 0.92;
+    }
+
+    .start-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(10, 42, 79, 0.28);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .start-box {
+      width: min(92vw, 560px);
+      text-align: center;
+      padding: 26px 22px;
+    }
+
+    .start-title {
+      margin: 0 0 12px;
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      font-weight: 900;
+    }
+
+    .start-text {
+      margin: 0 0 18px;
+      font-size: 1.05rem;
+      line-height: 1.6;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 700px) {
+      .overlay {
+        padding: 12px;
+      }
+
+      .button-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .score-card,
+      .weather-card {
+        flex: 1 1 100%;
+      }
+
+      .top-bar {
+        align-items: stretch;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .weather-btn {
+        min-height: 80px;
+      }
+
+      .weather-btn .icon {
+        font-size: 1.6rem;
+      }
+
+      .weather-btn .label {
+        font-size: 0.98rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="weatherCanvas"></canvas>
+
+  <div class="start-screen" id="startScreen">
+    <div class="start-box card">
+      <h1 class="start-title">Weather Game</h1>
+      <p class="start-text">
+        Tap the button below to start the game and enable clear voice playback.
+      </p>
+      <button class="start-btn" id="startBtn">▶ Start Game</button>
+    </div>
+  </div>
+
+  <div class="overlay">
+    <div class="top-bar">
+      <div class="score-card card">
+        <div class="score-label">Score</div>
+        <div class="score-value" id="score">0</div>
+      </div>
+
+      <div class="weather-card card">
+        <div class="weather-label">Sentence Pattern</div>
+        <div class="weather-value">It's ...</div>
+      </div>
+    </div>
+
+    <div class="center-area">
+      <div>
+        <div class="question-box card">
+          <h1 class="question-title">What's the weather like?</h1>
+          <div class="question-subtitle">Look at the animation and choose the correct weather word.</div>
+        </div>
+        <div id="feedback" class="feedback"></div>
+      </div>
+    </div>
+
+    <div class="bottom-panel card">
+      <div class="button-grid" id="buttonGrid"></div>
+
+      <div class="controls">
+        <button class="speak-btn" id="repeatBtn">🔊 Repeat Question</button>
+        <button class="reset-btn" id="resetBtn">🔄 New Round</button>
+      </div>
+
+      <div class="hint">Tap a weather word to answer.</div>
+    </div>
+  </div>
+
+  <script>
+    const weatherOptions = [
+      { key: "sunny", label: "Sunny", icon: "☀️" },
+      { key: "cloudy", label: "Cloudy", icon: "☁️" },
+      { key: "windy", label: "Windy", icon: "💨" },
+      { key: "stormy", label: "Stormy", icon: "⛈️" },
+      { key: "rainy", label: "Rainy", icon: "🌧️" },
+      { key: "snowy", label: "Snowy", icon: "❄️" }
+    ];
+
+    const canvas = document.getElementById("weatherCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreEl = document.getElementById("score");
+    const feedbackEl = document.getElementById("feedback");
+    const buttonGrid = document.getElementById("buttonGrid");
+    const resetBtn = document.getElementById("resetBtn");
+    const repeatBtn = document.getElementById("repeatBtn");
+    const startBtn = document.getElementById("startBtn");
+    const startScreen = document.getElementById("startScreen");
+
+    let width = 0;
+    let height = 0;
+    let dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+    let score = 0;
+    let currentWeather = null;
+    let acceptingInput = false;
+    let autoAdvanceTimer = null;
+    let streak = 0;
+    let wrongAttempts = 0;
+    let audioCtx = null;
+
+    let clouds = [];
+    let rainDrops = [];
+    let snowFlakes = [];
+    let windLines = [];
+    let stars = [];
+    let lightningAlpha = 0;
+    let sunRaysRotation = 0;
+
+    let voiceUnlocked = false;
+    let selectedVoice = null;
+    let speechToken = 0;
+    let isSpeaking = false;
+    let pendingSpeakTimeout = null;
+
+    function resizeCanvas() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + "px";
+      canvas.style.height = height + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      createParticles();
+    }
+
+    function random(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function pickRandomWeather(excludeKey = null) {
+      const pool = excludeKey
+        ? weatherOptions.filter(item => item.key !== excludeKey)
+        : weatherOptions;
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    function createParticles() {
+      clouds = Array.from({ length: 8 }, () => ({
+        x: random(-200, width),
+        y: random(30, height * 0.45),
+        w: random(100, 230),
+        h: random(40, 90),
+        speed: random(0.15, 0.7),
+        alpha: random(0.35, 0.85)
+      }));
+
+      rainDrops = Array.from({ length: Math.max(120, Math.floor(width * 0.18)) }, () => ({
+        x: random(0, width),
+        y: random(-height, height),
+        len: random(10, 24),
+        speed: random(7, 15),
+        drift: random(-1.2, 0.8),
+        alpha: random(0.3, 0.8)
+      }));
+
+      snowFlakes = Array.from({ length: Math.max(90, Math.floor(width * 0.12)) }, () => ({
+        x: random(0, width),
+        y: random(-height, height),
+        r: random(1.5, 4.5),
+        speed: random(0.6, 2),
+        sway: random(0.5, 2),
+        phase: random(0, Math.PI * 2),
+        alpha: random(0.5, 1)
+      }));
+
+      windLines = Array.from({ length: 18 }, () => ({
+        x: random(-width, width),
+        y: random(50, height - 80),
+        len: random(90, 220),
+        speed: random(3, 8),
+        curve: random(-18, 18),
+        alpha: random(0.2, 0.65)
+      }));
+
+      stars = Array.from({ length: 28 }, () => ({
+        x: random(0, width),
+        y: random(0, height * 0.5),
+        r: random(1, 3),
+        alpha: random(0.1, 0.45)
+      }));
+    }
+
+    function loadEnglishVoice() {
+      if (!("speechSynthesis" in window)) return null;
+
+      const voices = window.speechSynthesis.getVoices() || [];
+      if (!voices.length) return null;
+
+      const preferred =
+        voices.find(v => v.lang === "en-US") ||
+        voices.find(v => v.lang && v.lang.toLowerCase().startsWith("en-us")) ||
+        voices.find(v => v.lang && v.lang.toLowerCase().startsWith("en")) ||
+        voices[0];
+
+      selectedVoice = preferred;
+      return preferred;
+    }
+
+    function stopSpeech() {
+      if (!("speechSynthesis" in window)) return;
+      speechToken += 1;
+
+      if (pendingSpeakTimeout) {
+        clearTimeout(pendingSpeakTimeout);
+        pendingSpeakTimeout = null;
+      }
+
+      try {
+        window.speechSynthesis.cancel();
+      } catch (err) {
+        // Ignore Safari speech cancellation quirks.
+      }
+
+      isSpeaking = false;
+    }
+
+    function speak(text, options = {}) {
+      if (!("speechSynthesis" in window) || !voiceUnlocked) return;
+
+      const token = ++speechToken;
+      const {
+        interrupt = true,
+        delay = 120,
+        rate = 0.9,
+        pitch = 1.02,
+        volume = 1
+      } = options;
+
+      if (pendingSpeakTimeout) {
+        clearTimeout(pendingSpeakTimeout);
+        pendingSpeakTimeout = null;
+      }
+
+      if (interrupt) {
+        try {
+          window.speechSynthesis.cancel();
+        } catch (err) {
+          // Ignore.
+        }
+      }
+
+      pendingSpeakTimeout = setTimeout(() => {
+        if (token !== speechToken) return;
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "en-US";
+        utterance.rate = rate;
+        utterance.pitch = pitch;
+        utterance.volume = volume;
+
+        if (!selectedVoice) {
+          loadEnglishVoice();
+        }
+        if (selectedVoice) {
+          utterance.voice = selectedVoice;
+        }
+
+        utterance.onstart = () => {
+          if (token !== speechToken) return;
+          isSpeaking = true;
+        };
+
+        utterance.onend = () => {
+          if (token !== speechToken) return;
+          isSpeaking = false;
+        };
+
+        utterance.onerror = () => {
+          if (token !== speechToken) return;
+          isSpeaking = false;
+        };
+
+        try {
+          window.speechSynthesis.speak(utterance);
+        } catch (err) {
+          isSpeaking = false;
+        }
+      }, delay);
+    }
+
+    function unlockVoiceAndStart() {
+      if (voiceUnlocked) return;
+
+      voiceUnlocked = true;
+      loadEnglishVoice();
+
+      // Safari warm-up: use a tiny silent utterance and leave a gap.
+      try {
+        const warmup = new SpeechSynthesisUtterance(" ");
+        warmup.volume = 0;
+        warmup.rate = 1;
+        warmup.pitch = 1;
+        if (selectedVoice) warmup.voice = selectedVoice;
+        window.speechSynthesis.speak(warmup);
+      } catch (err) {
+        // Ignore warm-up failure.
+      }
+
+      startScreen.classList.add("hidden");
+      acceptingInput = true;
+
+      setTimeout(() => {
+        askQuestion();
+      }, 350);
+    }
+
+    function askQuestion() {
+      speak("What's the weather like?", {
+        interrupt: true,
+        delay: 140,
+        rate: 0.88,
+        pitch: 1.02
+      });
+    }
+
+    function sayCorrectSentence(weatherKey) {
+      speak(`It's ${weatherKey}.`, {
+        interrupt: true,
+        delay: 140,
+        rate: 0.9,
+        pitch: 1.02
+      });
+    }
+
+    function sayTryAgain() {
+      speak("Try again!", {
+        interrupt: true,
+        delay: 110,
+        rate: 0.92,
+        pitch: 1.06
+      });
+    }
+
+    function showFeedback(message, type) {
+      feedbackEl.textContent = message;
+      feedbackEl.className = `feedback show ${type}`;
+    }
+
+    function clearFeedback() {
+      feedbackEl.textContent = "";
+      feedbackEl.className = "feedback";
+    }
+
+    function updateSentencePattern(text) {
+      document.querySelector(".weather-value").textContent = text;
+    }
+
+    function playSound(type) {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        gain.gain.value = 0.12;
+
+        if (type === "correct") {
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(523, audioCtx.currentTime);
+          osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.1);
+          osc.frequency.setValueAtTime(784, audioCtx.currentTime + 0.2);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+          osc.start(audioCtx.currentTime);
+          osc.stop(audioCtx.currentTime + 0.4);
+        } else {
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+          osc.frequency.setValueAtTime(150, audioCtx.currentTime + 0.15);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+          osc.start(audioCtx.currentTime);
+          osc.stop(audioCtx.currentTime + 0.3);
+        }
+      } catch (e) { /* Audio not supported */ }
+    }
+
+    function renderButtons() {
+      buttonGrid.innerHTML = "";
+
+      weatherOptions.forEach(item => {
+        const btn = document.createElement("button");
+        btn.className = "weather-btn";
+        btn.innerHTML = `
+          <div class="icon">${item.icon}</div>
+          <div class="label">${item.label}</div>
+        `;
+        btn.setAttribute("data-weather", item.key);
+        btn.setAttribute("aria-label", item.label);
+        btn.addEventListener("click", () => handleAnswer(item.key));
+        buttonGrid.appendChild(btn);
+      });
+    }
+
+    function setWeather(weatherObj, shouldSpeak = true) {
+      currentWeather = weatherObj;
+      wrongAttempts = 0;
+      clearFeedback();
+      lightningAlpha = 0;
+      updateSentencePattern("It's ...");
+
+      if (autoAdvanceTimer) {
+        clearTimeout(autoAdvanceTimer);
+        autoAdvanceTimer = null;
+      }
+
+      if (shouldSpeak && voiceUnlocked) {
+        setTimeout(() => {
+          askQuestion();
+        }, 180);
+      }
+    }
+
+    function nextRound() {
+      acceptingInput = true;
+      const next = pickRandomWeather(currentWeather ? currentWeather.key : null);
+      setWeather(next, true);
+    }
+
+    function resetGame() {
+      stopSpeech();
+      score = 0;
+      streak = 0;
+      scoreEl.textContent = score;
+      acceptingInput = true;
+      setWeather(pickRandomWeather(), true);
+    }
+
+    function highlightButton(key, cls) {
+      const btn = document.querySelector(`[data-weather="${key}"]`);
+      if (btn) {
+        btn.classList.add(cls);
+        btn.disabled = true;
+      }
+    }
+
+    function clearButtonStates() {
+      document.querySelectorAll(".weather-btn").forEach(btn => {
+        btn.classList.remove("correct", "wrong");
+        btn.disabled = false;
+      });
+    }
+
+    function handleAnswer(selectedKey) {
+      if (!acceptingInput || !currentWeather) return;
+
+      if (selectedKey === currentWeather.key) {
+        acceptingInput = false;
+        score += 1;
+        streak += 1;
+        wrongAttempts = 0;
+        scoreEl.textContent = score;
+        clearButtonStates();
+        highlightButton(currentWeather.key, "correct");
+        updateSentencePattern(`It's ${currentWeather.label}.`);
+
+        let feedbackMsg = `Excellent! It's ${currentWeather.label}.`;
+        if (streak === 3) feedbackMsg = "3 in a row! You're on fire! 🔥";
+        else if (streak === 5) feedbackMsg = "5 in a row! Amazing streak! ⭐";
+        else if (streak % 5 === 0 && streak > 5) feedbackMsg = `${streak} in a row! Incredible! 🏆`;
+
+        showFeedback(feedbackMsg, "good");
+        sayCorrectSentence(currentWeather.key);
+
+        autoAdvanceTimer = setTimeout(() => {
+          clearButtonStates();
+          nextRound();
+        }, 2300);
+      } else {
+        wrongAttempts += 1;
+        playSound("wrong");
+        highlightButton(selectedKey, "wrong");
+
+        if (wrongAttempts >= 2) {
+          acceptingInput = false;
+          streak = 0;
+          highlightButton(currentWeather.key, "correct");
+          updateSentencePattern(`It's ${currentWeather.label}.`);
+          showFeedback(`It's ${currentWeather.label}. Listen and try next one!`, "bad");
+          sayCorrectSentence(currentWeather.key);
+
+          autoAdvanceTimer = setTimeout(() => {
+            clearButtonStates();
+            nextRound();
+          }, 2800);
+        } else {
+          showFeedback("Try again!", "bad");
+          sayTryAgain();
+        }
+      }
+    }
+
+    function drawBackground() {
+      let gradient;
+
+      switch (currentWeather?.key) {
+        case "sunny":
+          gradient = ctx.createLinearGradient(0, 0, 0, height);
+          gradient.addColorStop(0, "#58c7ff");
+          gradient.addColorStop(1, "#ffe08a");
+          break;
+        case "cloudy":
+          gradient = ctx.createLinearGradient(0, 0, 0, height);
+          gradient.addColorStop(0, "#8fb3d9");
+          gradient.addColorStop(1, "#d9e6f2");
+          break;
+        case "windy":
+          gradient = ctx.createLinearGradient(0, 0, 0, height);
+          gradient.addColorStop(0, "#77d8ff");
+          gradient.addColorStop(1, "#c5f2ff");
+          break;
+        case "stormy":
+          gradient = ctx.createLinearGradient(0, 0, 0, height);
+          gradient.addColorStop(0, "#334a68");
+          gradient.addColorStop(1, "#6a7d96");
+          break;
+        case "rainy":
+          gradient = ctx.createLinearGradient(0, 0, 0, height);
+          gradient.addColorStop(0, "#5d86b3");
+          gradient.addColorStop(1, "#9dc3e6");
+          break;
+        case "snowy":
+          gradient = ctx.createLinearGradient(0, 0, 0, height);
+          gradient.addColorStop(0, "#b5dcff");
+          gradient.addColorStop(1, "#eef8ff");
+          break;
+        default:
+          gradient = ctx.createLinearGradient(0, 0, 0, height);
+          gradient.addColorStop(0, "#78d7ff");
+          gradient.addColorStop(1, "#b7ecff");
+      }
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+
+      for (let i = 0; i < 4; i++) {
+        const x = width * (0.18 + i * 0.24);
+        const y = height * (0.15 + (i % 2) * 0.18);
+        const radius = Math.min(width, height) * (0.14 + i * 0.02);
+        const alpha = currentWeather?.key === "stormy" ? 0.05 : 0.09;
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawCloud(x, y, w, h, alpha) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "white";
+
+      ctx.beginPath();
+      ctx.arc(x, y, h * 0.35, Math.PI * 0.5, Math.PI * 1.5);
+      ctx.arc(x + w * 0.24, y - h * 0.22, h * 0.4, Math.PI, Math.PI * 2);
+      ctx.arc(x + w * 0.5, y - h * 0.1, h * 0.47, Math.PI, Math.PI * 2);
+      ctx.arc(x + w * 0.76, y, h * 0.34, Math.PI * 1.5, Math.PI * 0.5);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function updateAndDrawClouds(speedBoost = 1) {
+      clouds.forEach(cloud => {
+        cloud.x += cloud.speed * speedBoost;
+        if (cloud.x > width + 260) {
+          cloud.x = -260;
+          cloud.y = random(20, height * 0.45);
+        }
+        drawCloud(cloud.x, cloud.y, cloud.w, cloud.h, cloud.alpha);
+      });
+    }
+
+    function drawSunny() {
+      updateAndDrawClouds(0.45);
+
+      const sunX = width * 0.82;
+      const sunY = height * 0.2;
+      const sunR = Math.min(width, height) * 0.08;
+
+      ctx.save();
+      ctx.translate(sunX, sunY);
+      ctx.rotate(sunRaysRotation);
+      for (let i = 0; i < 12; i++) {
+        ctx.rotate(Math.PI / 6);
+        ctx.beginPath();
+        ctx.strokeStyle = "rgba(255, 223, 83, 0.9)";
+        ctx.lineWidth = 5;
+        ctx.moveTo(sunR + 8, 0);
+        ctx.lineTo(sunR + 30, 0);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      const glow = ctx.createRadialGradient(sunX, sunY, sunR * 0.4, sunX, sunY, sunR * 2.4);
+      glow.addColorStop(0, "rgba(255, 235, 120, 0.95)");
+      glow.addColorStop(0.5, "rgba(255, 220, 90, 0.35)");
+      glow.addColorStop(1, "rgba(255, 220, 90, 0)");
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, sunR * 2.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#ffd54a";
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
+      ctx.fill();
+
+      sunRaysRotation += 0.0025;
+    }
+
+    function drawCloudy() {
+      for (const s of stars) {
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(255,255,255,${s.alpha})`;
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      updateAndDrawClouds(0.9);
+      clouds.slice(0, 5).forEach((cloud, i) => {
+        drawCloud(cloud.x - 80 - i * 20, cloud.y + 80, cloud.w * 1.1, cloud.h * 1.08, cloud.alpha * 0.95);
+      });
+    }
+
+    function drawWindy() {
+      updateAndDrawClouds(1.8);
+
+      windLines.forEach(line => {
+        line.x += line.speed;
+        if (line.x > width + 260) {
+          line.x = -260;
+          line.y = random(60, height - 80);
+          line.len = random(90, 220);
+        }
+
+        ctx.beginPath();
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        ctx.strokeStyle = `rgba(255,255,255,${line.alpha})`;
+        ctx.moveTo(line.x, line.y);
+        ctx.quadraticCurveTo(
+          line.x + line.len * 0.35,
+          line.y + line.curve,
+          line.x + line.len,
+          line.y
+        );
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = `rgba(255,255,255,${line.alpha * 0.8})`;
+        ctx.moveTo(line.x + 25, line.y + 18);
+        ctx.quadraticCurveTo(
+          line.x + line.len * 0.45,
+          line.y + 18 - line.curve * 0.7,
+          line.x + line.len * 0.9,
+          line.y + 18
+        );
+        ctx.stroke();
+      });
+    }
+
+    function drawRain(color = "rgba(200,235,255,0.75)", speedBoost = 1) {
+      rainDrops.forEach(drop => {
+        drop.x += drop.drift * speedBoost;
+        drop.y += drop.speed * speedBoost;
+
+        if (drop.y > height + 20 || drop.x < -30 || drop.x > width + 30) {
+          drop.x = random(0, width);
+          drop.y = random(-120, -20);
+        }
+
+        ctx.beginPath();
+        ctx.strokeStyle = color.replace("0.75", String(drop.alpha));
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+        ctx.moveTo(drop.x, drop.y);
+        ctx.lineTo(drop.x + drop.drift * 1.5, drop.y + drop.len);
+        ctx.stroke();
+      });
+    }
+
+    function drawStormy() {
+      updateAndDrawClouds(1.3);
+      clouds.forEach((cloud, i) => {
+        drawCloud(cloud.x - i * 10, cloud.y + 15, cloud.w * 1.05, cloud.h * 1.08, Math.min(0.95, cloud.alpha + 0.15));
+      });
+
+      drawRain("rgba(210,235,255,0.75)", 1.25);
+
+      if (Math.random() < 0.012) {
+        lightningAlpha = 0.95;
+      }
+      lightningAlpha *= 0.92;
+
+      if (lightningAlpha > 0.05) {
+        const boltX = width * random(0.2, 0.8);
+        ctx.save();
+        ctx.strokeStyle = `rgba(255,255,220,${lightningAlpha})`;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(boltX, 60);
+        ctx.lineTo(boltX - 20, 130);
+        ctx.lineTo(boltX + 10, 130);
+        ctx.lineTo(boltX - 30, 220);
+        ctx.lineTo(boltX + 20, 150);
+        ctx.lineTo(boltX - 5, 150);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.fillStyle = `rgba(255,255,255,${lightningAlpha * 0.22})`;
+        ctx.fillRect(0, 0, width, height);
+      }
+    }
+
+    function drawRainy() {
+      updateAndDrawClouds(0.85);
+      drawRain("rgba(210,240,255,0.75)", 1);
+    }
+
+    function drawSnowy() {
+      updateAndDrawClouds(0.55);
+
+      snowFlakes.forEach(flake => {
+        flake.phase += 0.02;
+        flake.y += flake.speed;
+        flake.x += Math.sin(flake.phase) * flake.sway * 0.45;
+
+        if (flake.y > height + 10) {
+          flake.y = -10;
+          flake.x = random(0, width);
+        }
+        if (flake.x > width + 10) flake.x = -10;
+        if (flake.x < -10) flake.x = width + 10;
+
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(255,255,255,${flake.alpha})`;
+        ctx.arc(flake.x, flake.y, flake.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function animate() {
+      drawBackground();
+
+      switch (currentWeather?.key) {
+        case "sunny":
+          drawSunny();
+          break;
+        case "cloudy":
+          drawCloudy();
+          break;
+        case "windy":
+          drawWindy();
+          break;
+        case "stormy":
+          drawStormy();
+          break;
+        case "rainy":
+          drawRainy();
+          break;
+        case "snowy":
+          drawSnowy();
+          break;
+        default:
+          drawSunny();
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    renderButtons();
+
+    resetBtn.addEventListener("click", () => {
+      if (!voiceUnlocked) return;
+      resetGame();
+    });
+
+    repeatBtn.addEventListener("click", () => {
+      if (!voiceUnlocked) return;
+      askQuestion();
+    });
+
+    startBtn.addEventListener("click", () => {
+      unlockVoiceAndStart();
+    });
+
+    window.addEventListener("resize", resizeCanvas);
+
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        loadEnglishVoice();
+      };
+    }
+
+    resizeCanvas();
+    currentWeather = pickRandomWeather();
+    animate();
+  </script>
+</body>
+</html>
